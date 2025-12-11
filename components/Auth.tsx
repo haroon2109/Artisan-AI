@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Language, t, languages } from '../translations';
 import { PosterGeneratorIcon, MultiLanguageIcon, MarketAnalyticsIcon } from './icons';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../src/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../src/lib/firebase';
 
 interface AuthProps {
     language: Language;
@@ -28,9 +29,14 @@ const Auth: React.FC<AuthProps> = ({ language, setLanguage }) => {
             if (isLogin) {
                 await signInWithEmailAndPassword(auth, email, password);
             } else {
-                await createUserWithEmailAndPassword(auth, email, password);
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                // Create user document in Firestore to verify data persistence
+                await setDoc(doc(db, 'users', userCredential.user.uid), {
+                    email: email,
+                    createdAt: new Date().toISOString(),
+                    role: 'artisan'
+                });
             }
-            // Auth state change will trigger re-render in App
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Authentication failed. Please try again.');
